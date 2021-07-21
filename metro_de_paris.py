@@ -1,4 +1,5 @@
 import pandas
+import math
 
 dir_dist = pandas.read_csv('dir_dist.csv', header=None)
 real_dist = pandas.read_csv('real_dist.csv', header=None)
@@ -7,9 +8,9 @@ lines = pandas.read_csv('lines.csv', header=None)
 
 def dist_km_to_minutes(dist):
     for i in range(14):
-        for j in range(14):
-            
+        for j in range(14):            
             dist[i][j] = dist[i][j]*2
+            
     # print(dist)
     return dist
 
@@ -21,6 +22,16 @@ def valid_station(str_station):
     
     print("Estação invalida")
     return str_station, False
+    
+    
+def get_connected_stations(station):
+    connected_stations=[]
+    for con, dist in enumerate(real_dist[station]):
+        if not math.isnan(dist):
+            connected_stations.append((con,dist))
+    
+    print(connected_stations)
+    return(connected_stations)
     
     
 # print(dir_dist)
@@ -51,3 +62,9 @@ s_station = int(str_s_station[1:]) - 1
 d_station = int(str_d_station[1:]) - 1
 
 print(s_station, d_station)
+
+
+
+get_connected_stations(s_station)
+    
+    
