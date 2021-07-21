@@ -26,7 +26,7 @@ def valid_station(str_station):
 # print(dir_dist)
 dir_dist = dist_km_to_minutes(dir_dist)
 
-# print(real_dist)
+print(real_dist)
 real_dist = dist_km_to_minutes(real_dist)     
 
 # print (lines)
