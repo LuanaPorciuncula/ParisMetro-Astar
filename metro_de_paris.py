@@ -4,6 +4,12 @@ import math
 dir_dist = pandas.read_csv('dir_dist.csv', header=None)
 real_dist = pandas.read_csv('real_dist.csv', header=None)
 lines = pandas.read_csv('lines.csv', header=None)
+    
+# print(dir_dist)
+dir_dist = dist_km_to_minutes(dir_dist)
+# print(real_dist)
+real_dist = dist_km_to_minutes(real_dist)
+# print(lines)
 
 
 def dist_km_to_minutes(dist):
@@ -19,21 +25,10 @@ def dist_km_to_minutes(dist):
 def valid_station(str_station):
     if str_station[0] == "E" and str_station[1:].isnumeric():
         if int(str_station[1:]) >= 1 and int(str_station[1:]) <= 14:
-            return str_station, True
+            return True
     
     print("Estação invalida")
-    return str_station, False
-    
-    
-def get_connected_stations(station):
-    connected_stations=[]
-    for con, dist in enumerate(real_dist[station]):
-        if not math.isnan(dist):
-            # connected_stations.append((con,dist))
-            connected_stations.append(con)
-    
-    # print(connected_stations)
-    return(connected_stations)
+    return False
 
 
 def get_station(req_station):
@@ -43,16 +38,10 @@ def get_station(req_station):
         print(req_station)
         str_station = input()
 
-        str_station, is_valid = valid_station(str_station)
+        is_valid = valid_station(str_station)
     
     return str_station
     
-    
-# print(dir_dist)
-dir_dist = dist_km_to_minutes(dir_dist)
-# print(real_dist)
-real_dist = dist_km_to_minutes(real_dist)
-#print(lines)
 
 str_s_station = get_station("Em qual estação você se encontra?")
 str_d_station = get_station("Qual a estação de destino?")
@@ -60,7 +49,18 @@ str_d_station = get_station("Qual a estação de destino?")
 # Convertendo a estação pra indice pra facilitar consulta
 s_station = int(str_s_station[1:]) - 1
 d_station = int(str_d_station[1:]) - 1
-# print(s_station, d_station)
+    
+    
+def get_connected_stations(station, marked_stations):
+    connected_stations=[]
+    for con, dist in enumerate(real_dist[station]):
+        if not math.isnan(dist):
+            connected_stations.append(con)
+    connected_stations = list(
+            filter(lambda station: station not in marked_stations, 
+                   connected_stations))
+    return(connected_stations)
+
 
 # h
 def estimate_dist(target, destiny):
@@ -71,26 +71,37 @@ def estimate_dist(target, destiny):
 
 # g
 def covered_dist(current, target, covered_path):
-    #print(covered_path)
     c_dist = 0
-    line = lines[current][target]
+    line = ""
+    
+    if len(covered_path) > 0:
+        line = lines[covered_path[0][0]][covered_path[0][1]]
+    
     for edge in covered_path:
         c_dist += real_dist[edge[0]][edge[1]]
         newline = lines[edge[0]][edge[1]]
-        #print(newline, edge[0], edge[1])
+        
         if newline != line:
             line = newline
-            # o tempo gasto para trocar de linha dentro de mesma estação (fazer baldeação) é de 4 minutos
+            # o tempo gasto para fazer baldeação é de 4 minutos
             c_dist += 4
+            
     c_dist += real_dist[current][target]
-    #print(current, target, line)
+    newline = lines[current][target]
+    
+    if newline != line and line != "":
+        # o tempo gasto para fazer baldeação é de 4 minutos
+        c_dist += 4
+        
+    line = newline
     return c_dist, line
 
 def expand_border(current, destiny, covered_path, border, marked_stations):
-    connected_stations = get_connected_stations(current)
-    connected_stations = list(filter(lambda station: station not in marked_stations, connected_stations))
+    connected_stations = get_connected_stations(current, marked_stations)
+    # Se não tiver como seguir por um caminho, volte pro nó anterior
     if len(connected_stations) == 0 and len(covered_path) > 0:
         covered_path.pop()
+    
     newborder = border
     for station in connected_stations:
         c_dist, curline = covered_dist(current, station, covered_path)
@@ -100,7 +111,19 @@ def expand_border(current, destiny, covered_path, border, marked_stations):
     newborder = sorted(newborder, key=lambda x: x[2])
     return newborder
 
-    
+
+def print_iter(border):
+        it_border = ""
+        for e in border:
+            station = "E"+ str(e[0]+1)
+            line = e[1]
+            f = str(e[2])
+            g = str(e[3])
+            h = str(e[4])
+            it_border+= "("+station+" "+line+" "+ f +" "+ g + " "+ h + "), "
+        print(it_border)
+
+ 
 def astar(destiny, border, covered_path, marked_stations):
     if border[0][0] != destiny:
         if len(covered_path) == 0:
@@ -110,10 +133,8 @@ def astar(destiny, border, covered_path, marked_stations):
         border = border[1:]
         
         border = expand_border(current, destiny, covered_path, border, marked_stations)
-        it_border = ""
-        for e in border:
-            it_border+="(E"+ str(e[0]+1) + " " + e[1] + " " + str(e[2]) + " " + str(e[3]) + " " + str(e[4]) + ") "
-        #print(it_border)
+        print_iter(border)
+        
         if(len(covered_path) == 0):
             covered_path=[[current, border[0][0]]]
         else:
@@ -125,13 +146,11 @@ def astar(destiny, border, covered_path, marked_stations):
         fast_path = ""
         for ride in covered_path:
             fast_path+="E"+str(ride[0]+1)+" - "
-            # print("from E"+ str(ride[0]+1), "to E"+ str(ride[1]+1))
         fast_path += "E"+str(covered_path[-1][1]+1)
         
         print(fast_path)
         #print("GG")
 
-# get_connected_stations(s_station)
 
 border = [[s_station, "", dir_dist[s_station][d_station], 0, dir_dist[s_station][d_station]]]   
 covered_path = [] 
